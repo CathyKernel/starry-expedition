@@ -1,0 +1,30 @@
+# Netlify configuration for The Starry Expedition.
+#
+# The site is a fully static Next.js export (`out/`) — plain HTML/JS/CSS,
+# no server functions, no environment variables. Importing this repository
+# in Netlify ("Add new site → Import an existing project") picks up this
+# file automatically: nothing to configure.
+
+[build]
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Hashed build assets never change — cache them for a year.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The painting and the sprite rarely change — one week.
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

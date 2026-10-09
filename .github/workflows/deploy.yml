@@ -1,0 +1,106 @@
+# Deploys The Starry Expedition to GitHub Pages on every push to `main`.
+#
+# One-time setup after your first push:
+#   Repository → Settings → Pages → Build and deployment → Source:
+#   select "GitHub Actions"   (instead of "Deploy from a branch")
+#
+# Your site will be live at:
+#   https://<your-username>.github.io/<repo-name>/
+#
+# Using a custom domain, or a `<username>.github.io` root repository?
+#   Run this workflow manually (Actions tab → "Deploy to GitHub Pages" →
+#   Run workflow) and choose base path "root", so assets are served from `/`.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      base_path:
+        description: "Base path: 'auto' = /<repo-name>, 'root' = / (custom domain or <user>.github.io repo), or an explicit path like /my-site"
+        required: false
+        default: "auto"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, cancelling outdated runs.
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Compute base path
+        id: bp
+        shell: bash
+        run: |
+          INPUT="${{ github.event.inputs.base_path || 'auto' }}"
+
+          # A custom domain (public/CNAME) always serves the site from the
+          # root "/", so the build must NOT use a sub-path base. Detect it
+          # first — this makes custom-domain setup foolproof.
+          if [ -f public/CNAME ] && { [ "$INPUT" = "auto" ] || [ -z "$INPUT" ]; }; then
+            echo "Custom domain detected (public/CNAME) - building for root base path."
+            echo "base=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          case "$INPUT" in
+            auto)
+              REPO_NAME="${GITHUB_REPOSITORY#*/}"
+              OWNER_NAME="${GITHUB_REPOSITORY%%/*}"
+              if [ "$REPO_NAME" = "$OWNER_NAME.github.io" ]; then
+                BASE=""
+              else
+                BASE="/$REPO_NAME"
+              fi
+              ;;
+            root|/)
+              BASE=""
+              ;;
+            *)
+              BASE="$INPUT"
+              ;;
+          esac
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "Building with base path: '$BASE'"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static site
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.bp.outputs.base }}
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
