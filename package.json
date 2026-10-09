@@ -1,6 +1,6 @@
 {
   "name": "starry-expedition",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "A cat, a wooden boat, and Van Gogh's The Starry Night — an interactive HCI design demo with a live solo-piano Canon in D, gatherable starlight, and a reversible dawn.",
   "scripts": {
@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
